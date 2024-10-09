@@ -1,20 +1,26 @@
-from ultralytics import YOLO
-from retinaface import RetinaFace
+import os
+from tqdm import tqdm
+from PIL import Image
+
 import cv2
+import face_recognition
+from retinaface import RetinaFace
+from ultralytics import YOLO
 
-def main():
-    # YOLO model
-    # weights_path = "/Users/andylee/Projects/scrapbook/data/yolov10n.pt"
-    # model = YOLO(weights_path)  # load a pretrained model (recommended for training)
-    # results = model(image_path)  # list of Results objects
-    img1 = "/Users/andylee/Downloads/dtb_team_dinner.jpeg"
-    image_path = "/Users/andylee/Desktop/andy_fphotos/IMG_2051.JPG"
+def _detect_faces(image):
+    """Returns face detections from image"""
+    pass
 
-    response = RetinaFace.detect_faces(img1)
-    print(response)
+def _classify_siblings(image):
+    """Return back list of classified siblings"""
+    pass
 
-    # plot the coordinates of detected faces 
-    draw_bounding_boxes(img1, response)
+def _enrich_image_with_metadata(image):
+    """Add metadata to image"""
+    pass
+
+def _store_enriched_image_to_database(image_data):
+    pass
 
 
 def draw_bounding_boxes(image_path, faces):
@@ -37,6 +43,39 @@ def draw_bounding_boxes(image_path, faces):
     # save the file to scrapbook/data
     cv2.imwrite('/Users/andylee/Projects/scrapbook/data/image_bounding_box.jpg', image)
 
+
+def crop_faces_from_images(input_dir, output_dir):
+
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+
+    for i, filename in enumerate(tqdm(os.listdir(input_dir), desc="Processing images")):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            image_path = os.path.join(input_dir, filename)
+            image = face_recognition.load_image_file(image_path)
+
+            # Find all face locations in the image
+            face_locations = face_recognition.face_locations(image)
+
+            # Iterate over each face found
+            for i, face_location in enumerate(face_locations):
+                top, right, bottom, left = face_location
+
+                # Crop the face from the image
+                face_image = image[top:bottom, left:right]
+                pil_image = Image.fromarray(face_image)
+
+                # Save the cropped face to the output directory
+                face_filename = f"{os.path.splitext(filename)[0]}_face_{i+1}.jpg"
+                pil_image.save(os.path.join(output_dir, face_filename))
+
+
+def main():
+    # Example usage
+    input_directory = "/Users/andylee/Desktop/scrapbook_face_in"
+    output_directory = "/Users/andylee/Projects/scrapbook/data/output_faces"
+    crop_faces_from_images(input_directory, output_directory)
 
 if __name__ == "__main__":
     main()
