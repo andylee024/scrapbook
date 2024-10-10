@@ -1,11 +1,20 @@
 import os
 from tqdm import tqdm
-from PIL import Image
+import shutil
 
 import cv2
 import face_recognition
+from inference_sdk import InferenceHTTPClient
+from PIL import Image
 from retinaface import RetinaFace
 from ultralytics import YOLO
+
+
+# initialize the client
+roboflow_client = InferenceHTTPClient(
+    api_url="https://detect.roboflow.com",
+    api_key="HUqmaXJ2N450DbuOPbLY"
+)
 
 def _detect_faces(image):
     """Returns face detections from image"""
@@ -71,11 +80,41 @@ def crop_faces_from_images(input_dir, output_dir):
                 pil_image.save(os.path.join(output_dir, face_filename))
 
 
+def predict_sibling(image_path):
+    result = roboflow_client.infer(image_path, model_id="sibling_detector/1")
+    return result
+
+
 def main():
-    # Example usage
-    input_directory = "/Users/andylee/Desktop/scrapbook_face_in"
-    output_directory = "/Users/andylee/Projects/scrapbook/data/output_faces"
-    crop_faces_from_images(input_directory, output_directory)
+    # crop faces workflow 
+    # input_directory = "/Users/andylee/Projects/scrapbook/data/test_faces"
+    # output_directory = "/Users/andylee/Projects/scrapbook/data/test_faces_cropped"
+    # crop_faces_from_images(input_directory, output_directory)
+
+    # predict siblings workflow
+    input_directory = "/Users/andylee/Projects/scrapbook/data/test_faces_cropped"
+    for filename in os.listdir(input_directory):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            image_path = os.path.join(input_directory, filename)
+            result = predict_sibling(image_path)
+            print(f"Prediction for {filename}: {result}")
+
+            # Extract the predicted classes from the result
+            predicted_classes = result.get('predicted_classes', [])
+
+            # Create a new filename with the predicted classes
+            predicted_classes_str = "_".join(predicted_classes)
+            new_filename = f"{os.path.splitext(filename)[0]}_{predicted_classes_str}.jpg"
+            # Ensure the predicted_faces directory exists
+            predicted_faces_dir = os.path.join(input_directory, "predicted_faces")
+            os.makedirs(predicted_faces_dir, exist_ok=True)
+
+            # Copy and rename the file with the new filename in the predicted_faces directory
+            new_image_path = os.path.join(predicted_faces_dir, new_filename)
+
+            # Copy and rename the file with the new filename
+            new_image_path = os.path.join(input_directory, new_filename)
+            shutil.copy(image_path, new_image_path)
 
 if __name__ == "__main__":
     main()
